@@ -128,27 +128,30 @@ const stopDrawing = () => {
 };
   
 const draw = (event: MouseEvent | TouchEvent) => {
-    if (!isDrawing.value || !context.value || !canvasRef.value) return;
+  if (!isDrawing.value || !context.value || !canvasRef.value) return;
 
-    let x: number, y: number;
-    const rect = canvasRef.value.getBoundingClientRect();
-    
-    if (event instanceof MouseEvent) {
-        x = event.clientX - rect.left;
-        y = event.clientY - rect.top;
-    } else if (event instanceof TouchEvent) {
-        x = event.touches[0].clientX - rect.left;
-        y = event.touches[0].clientY - rect.top;
-    }
+  let x: number = 0, y: number = 0;
+  const rect = canvasRef.value.getBoundingClientRect();
 
-    drawnPoints.value.push({ x, y });
+  if (event instanceof MouseEvent) {
+    x = event.clientX - rect.left;
+    y = event.clientY - rect.top;
+  } else if (event instanceof TouchEvent) {
+    x = event.touches[0].clientX - rect.left;
+    y = event.touches[0].clientY - rect.top;
+  } else {
+    return;
+  }
 
-    context.value.lineTo(x, y);
-    context.value.stroke();
-    context.value.beginPath();
-    context.value.moveTo(x, y);
-    console.log(drawnPoints.value)
+  drawnPoints.value.push({ x, y });
+
+  context.value.lineTo(x, y);
+  context.value.stroke();
+  context.value.beginPath();
+  context.value.moveTo(x, y);
+  console.log('Drawing at:', x, y);
 };
+
 
 const clearCanvas = () => {
     if (context.value && canvasRef.value) context.value.clearRect(0, 0, canvasRef.value.width, canvasRef.value.height);
