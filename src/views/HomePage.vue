@@ -7,8 +7,9 @@
             <h2>ECG Generator Simulation</h2>
           </div>
           <div class="flex items-center gap-3">
-            <button class="btn btn-base-300" @click="$router.push({name: 'Home'})">Home</button>
-            <button class="btn btn-base-300" @click="$router.push({name: 'Simulation'})">Sim</button>
+            <button class="btn btn-base-300" @click="$router.replace({name: 'Home'})">Home</button>
+            <button class="btn btn-base-300" @click="$router.replace({name: 'Simulation'})">Sim</button>
+            <button class="btn btn-base-300" @click="$router.replace({name: 'Draw'})">Draw</button>
           </div>
         </div>
         <input type="checkbox" id="insert_modal" class="modal-toggle" />
