@@ -13,11 +13,11 @@
             </div>
           </div>
           <div class="grid grid-cols-1 items-center justify-items-center p-6">
-            <div class="w-full p-4 bg-base-100 rounded-xl h-[80vh] h-full">
-              <div v-if="!chartDataAvailable">
+            <div class="w-full p-4 bg-base-100 rounded-xl">
+              <div v-if="!chartDataAvailable" class="mt-6 w-full h-[80vh]">
                 <canvas 
                     ref="canvasRef" 
-                    class="w-full h-[60vh] h-full rounded-xl"
+                    class="w-full h-[60vh] rounded-xl"
                     style="border:1px solid black; touch-action: none;"
                     @mousedown="startDrawing" 
                     @mouseup="stopDrawing" 
@@ -28,7 +28,7 @@
                     @touchmove="draw"
                 ></canvas>
               </div>
-              <div v-if="chartDataAvailable" class="mt-6">
+              <div v-if="chartDataAvailable" class="mt-6 w-full h-[80vh]">
                 <canvas ref="chartCanvasRef" class="w-full" style="height:300px;"></canvas>
               </div>
               <div class="flex items-center gap-3 justify-between w-full mt-6">
