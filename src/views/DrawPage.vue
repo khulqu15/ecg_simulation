@@ -14,8 +14,13 @@
           </div>
           <div class="grid grid-cols-1 items-center justify-items-center p-6">
             <div class="w-full p-4 bg-base-100 rounded-xl">
-              <div v-if="!chartDataAvailable" class="mt-6 w-full h-[80vh]">
-                <canvas 
+              <div v-if="!chartDataAvailable" class="relative">
+                <div class="absolute -left-2 bottom-0 h-24 w-0.5 bg-base-content flex items-start justify-end">
+                  <span class="relative -top-6 left-1">Y</span>
+                </div>
+                <div class="absolute -left-2 bottom-0 h-0.5 w-1/2 bg-base-content flex items-end justify-end">X</div>
+                <div class="mt-6 w-full h-[63vh]">
+                  <canvas     
                     ref="canvasRef" 
                     class="w-full h-[60vh] rounded-xl"
                     style="border:1px solid black; touch-action: none;"
@@ -26,7 +31,8 @@
                     @touchstart="startDrawing"
                     @touchend="stopDrawing"
                     @touchmove="draw"
-                ></canvas>
+                  ></canvas>
+                </div>
               </div>
               <div v-if="chartDataAvailable" class="mt-6 w-full h-[80vh]">
                 <canvas ref="chartCanvasRef" class="w-full" style="height:300px;"></canvas>
@@ -57,6 +63,7 @@
                 </div>
                 <div class="flex gap-3 items-center">
                     <button @click="clearCanvas()" class="btn btn-ghost">Reset</button>
+                    <button @click="drawExampleWave()" class="btn bg-green-600 text-white">Example Wave</button>
                     <button @click="convertToChart()" v-if="!chartDataAvailable" class="btn bg-blue-600 text-white">Convert to Chart</button>
                     <button v-if="chartDataAvailable" class="btn bg-blue-600 text-white">Save to Hardware</button>
                 </div>
@@ -150,6 +157,30 @@ const draw = (event: MouseEvent | TouchEvent) => {
   context.value.beginPath();
   context.value.moveTo(x, y);
   console.log('Drawing at:', x, y);
+};
+
+
+const drawExampleWave = () => {
+  if (!context.value || !canvasRef.value) return;
+  clearCanvas();
+  
+  const ctx = context.value;
+  const width = canvasRef.value.width;
+  const height = canvasRef.value.height;
+  const amplitude = height / 4;
+  const frequency = 0.05;
+  const offsetX = 0;
+
+  ctx.beginPath();
+  ctx.moveTo(0, height / 2);
+  for (let x = 0; x < width; x++) {
+    const y = height / 2 + amplitude * Math.sin(frequency * (x + offsetX));
+    ctx.lineTo(x, y);
+    drawnPoints.value.push({ x, y });
+  }
+  ctx.strokeStyle = 'blue';
+  ctx.lineWidth = 2;
+  ctx.stroke();
 };
 
 
