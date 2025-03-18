@@ -161,25 +161,21 @@ async function fetchDataFromFirebase() {
     if (snapshot.exists()) {
       const data = snapshot.val();
 
-      // Organize data into ADC and Volts waves
       const adcWave = [];
       const voltsWave = [];
 
       for (const key in data) {
         const entry = data[key];
-        // Add ADC values
         adcWave.push(...entry.ain.map((value: number, index: number) => ({
           value,
           date: new Date(entry.timestamp + index * 1000).toISOString(),
         })));
-        // Add Volts values
         voltsWave.push(...entry.volts.map((value: number, index: number) => ({
           value,
           date: new Date(entry.timestamp + index * 1000).toISOString(),
         })));
       }
 
-      // Update waves data
       waves.value[0].data = adcWave;
       waves.value[1].data = voltsWave;
     } else {

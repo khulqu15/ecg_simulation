@@ -62,15 +62,36 @@
                     </div>
                 </div>
                 <div class="flex gap-3 items-center">
-                    <button @click="clearCanvas()" class="btn btn-ghost">Reset</button>
+                    <button @click="clearCanvas(true)" class="btn btn-ghost">Reset</button>
                     <button @click="drawExampleWave()" class="btn bg-green-600 text-white">Example Wave</button>
                     <button @click="convertToChart()" v-if="!chartDataAvailable" class="btn bg-blue-600 text-white">Convert to Chart</button>
-                    <button v-if="chartDataAvailable" class="btn bg-blue-600 text-white">Save to Hardware</button>
+                    <button onclick="setting_modal.showModal()" v-if="chartDataAvailable" class="btn bg-blue-600 text-white">Save to Hardware</button>
                 </div>
               </div>
             </div>
           </div>
         </div>
+        <dialog id="setting_modal" class="modal">
+          <div class="modal-box">
+            <h3 class="text-lg font-bold">Hardware Setting</h3>
+            <div class="flex items-center justify-center gap-3">
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text">V Min</span></div>
+                <input type="number" v-model="settings.vmin" class="input input-bordered w-full" />
+              </label>
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text">V Max</span></div>
+                <input type="number" v-model="settings.vmax" class="input input-bordered w-full" />
+              </label>
+            </div>
+            <div class="modal-action">
+              <form method="dialog">
+                <button class="btn mx-2">Cancel</button>
+                <button @click="saveHardware()" class="btn bg-blue-600 text-white">Save</button>
+              </form>
+            </div>
+          </div>
+        </dialog>
       </ion-content>
     </ion-page>
 </template>
@@ -79,6 +100,8 @@
 import { IonContent, IonPage } from '@ionic/vue';
 import { ref, onMounted, onBeforeUnmount, nextTick, Ref } from 'vue';
 import { Icon } from "@iconify/vue";
+import { set, ref as dbRef } from 'firebase/database';
+import { database } from '@/firebaseConfig';
 import Chart from 'chart.js/auto';
 
 const canvasRef = ref<HTMLCanvasElement | null>(null);
@@ -92,7 +115,10 @@ const lineWidthSelected = ref(3)
 const drawnPoints = ref<Array<{ x: number, y: number }>>([]);
 let chartInstance: Chart | null = null;
 const chartDataAvailable = ref(false);
-
+const settings = ref({
+  vmax: 5,
+  vmin: 0
+})
 
 const adjustCanvasSize = () => {
     if (canvasRef.value) {
@@ -109,29 +135,42 @@ const adjustCanvasSize = () => {
         }
     }
 };
-  
+
+
+const saveHardware = () => {
+  reduceDrawnPoints()
+
+  const valueRef = dbRef(database, 'ads_value/')
+  set(valueRef, {
+    'points': drawnPoints.value,
+    'vmax': settings.value.vmax,
+    'vmin': settings.value.vmin,
+  })
+}
+
+
 onMounted(async () => {
-    await nextTick();
+  await nextTick();
+  adjustCanvasSize();
+  setTimeout(() => {
     adjustCanvasSize();
-    setTimeout(() => {
-        adjustCanvasSize();
-    }, 1000);
+  }, 1000);
   window.addEventListener('resize', adjustCanvasSize);
 });
 
 onBeforeUnmount(() => {
-    window.removeEventListener('resize', adjustCanvasSize);
-    if (chartInstance) chartInstance.destroy();
+  window.removeEventListener('resize', adjustCanvasSize);
+  if (chartInstance) chartInstance.destroy();
 });
   
 const startDrawing = (event: MouseEvent | TouchEvent) => {
-    isDrawing.value = true;
-    draw(event);
+  isDrawing.value = true;
+  draw(event);
 };
   
 const stopDrawing = () => {
-    isDrawing.value = false;
-    if (context.value) context.value.beginPath();
+  isDrawing.value = false;
+  if (context.value) context.value.beginPath();
 };
   
 const draw = (event: MouseEvent | TouchEvent) => {
@@ -184,18 +223,28 @@ const drawExampleWave = () => {
 };
 
 
-const clearCanvas = () => {
-    if (context.value && canvasRef.value) context.value.clearRect(0, 0, canvasRef.value.width, canvasRef.value.height);
-    if (chartInstance) {
-        chartInstance.destroy();
-        chartInstance = null;
-        chartDataAvailable.value = false;
-    }
-    adjustCanvasSize()
+const clearCanvas = (refresh = false) => {
+  if(refresh) window.location.reload()
+  if (context.value && canvasRef.value) {
+    context.value.clearRect(0, 0, canvasRef.value.width, canvasRef.value.height);
+    drawnPoints.value = [];
+    context.value.beginPath();
+  }
+};
+
+
+const reduceDrawnPoints = () => {
+  const maxPoints = 100;
+  if (drawnPoints.value.length > maxPoints) {
+    const step = Math.floor(drawnPoints.value.length / maxPoints);
+    drawnPoints.value = drawnPoints.value.filter((_, index) => index % step === 0);
+  }
 };
 
 const convertToChart = async () => {
   if (!drawnPoints.value.length || !canvasRef.value) return;
+
+  reduceDrawnPoints();
 
   const canvasHeight = canvasRef.value.height;
   const labels = drawnPoints.value.map((point, index) => index.toString());
@@ -245,4 +294,3 @@ const convertToChart = async () => {
 };
 
 </script>
-  
