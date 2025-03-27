@@ -66,7 +66,7 @@
                 </div>
                 <div class="flex gap-3 items-center">
                     <button @click="clearCanvas(true)" class="btn btn-ghost">Reset</button>
-                    <button @click="drawExampleWave()" class="btn bg-green-600 text-white">Example Wave</button>
+                    <button onclick="select_example_modal.showModal()" class="btn bg-green-600 text-white">Example Wave</button>
                     <button @click="convertToChart()" v-if="!chartDataAvailable" class="btn bg-blue-600 text-white">Convert to Chart</button>
                     <button onclick="setting_modal.showModal()" v-if="chartDataAvailable" class="btn bg-blue-600 text-white">Save to Hardware</button>
                 </div>
@@ -74,6 +74,28 @@
             </div>
           </div>
         </div>
+        <dialog id="select_example_modal" class="modal">
+          <div class="modal-box">
+            <h3 class="text-lg font-bold">Example Wave Options</h3>
+            <div class="flex items-center justify-center gap-3">
+              <label class="form-control w-full">
+                <div class="label"><span class="label-text">Category Heartbeat</span></div>
+                <select class="select select-bordered w-full" v-model="ecgType">
+                  <option value="normal">Normal</option>
+                  <option value="fast">Fast</option>
+                  <option value="slow">Slow</option>
+                  <option value="irregular">Irregular</option>
+                </select>
+              </label>
+            </div>
+            <div class="modal-action">
+              <form method="dialog">
+                <button class="btn mx-2">Cancel</button>
+                <button @click="drawExampleWave()" class="btn bg-blue-600 text-white">Draw Example</button>
+              </form>
+            </div>
+          </div>
+        </dialog>
         <dialog id="setting_modal" class="modal">
           <div class="modal-box">
             <h3 class="text-lg font-bold">Hardware Setting</h3>
@@ -124,6 +146,7 @@ const settings = ref({
 })
 let lastX = 0;
 let lastY = 0;
+const ecgType = ref<'normal' | 'fast' | 'slow' | 'irregular'>('normal');
 
 const adjustCanvasSize = () => {
     if (canvasRef.value) {
@@ -224,21 +247,57 @@ const draw = (event: MouseEvent | TouchEvent) => {
 const drawExampleWave = () => {
   if (!context.value || !canvasRef.value) return;
   clearCanvas();
-  
+
   const ctx = context.value;
   const width = canvasRef.value.width;
   const height = canvasRef.value.height;
-  const amplitude = height / 4;
-  const frequency = 0.05;
-  const offsetX = 0;
+  const baseline = height / 2;
+  const amplitude = height / 5;
 
-  ctx.beginPath();
-  ctx.moveTo(0, height / 2);
-  for (let x = 0; x < width; x++) {
-    const y = height / 2 + amplitude * Math.sin(frequency * (x + offsetX));
-    ctx.lineTo(x, y);
-    drawnPoints.value.push({ x, y });
+  let cycles = 6;
+  let variability = false;
+
+  if (ecgType.value === 'fast') {
+    cycles = 10;
+  } else if (ecgType.value === 'slow') {
+    cycles = 4;
+  } else if (ecgType.value === 'irregular') {
+    cycles = 6;
+    variability = true;
   }
+
+  drawnPoints.value = [];
+  ctx.beginPath();
+
+  for (let i = 0; i < cycles; i++) {
+    const basePoints = Math.floor(width / cycles);
+    const pointsPerCycle = variability
+      ? basePoints + (Math.random() * 50 - 25) // ±25 px
+      : basePoints;
+    const startX = i * basePoints;
+
+    const points = [
+      { x: startX + 0.1 * pointsPerCycle, y: baseline - amplitude * 0.1 },
+      { x: startX + 0.2 * pointsPerCycle, y: baseline },
+      { x: startX + 0.3 * pointsPerCycle, y: baseline + amplitude * 0.2 },
+      { x: startX + 0.35 * pointsPerCycle, y: baseline - amplitude * 1 },
+      { x: startX + 0.4 * pointsPerCycle, y: baseline + amplitude * 0.3 },
+      { x: startX + 0.5 * pointsPerCycle, y: baseline },
+      { x: startX + 0.65 * pointsPerCycle, y: baseline - amplitude * 0.2 },
+      { x: startX + 0.8 * pointsPerCycle, y: baseline },
+    ];
+
+    for (let j = 0; j < points.length; j++) {
+      const pt = points[j];
+      if (i === 0 && j === 0) {
+        ctx.moveTo(pt.x, pt.y);
+      } else {
+        ctx.lineTo(pt.x, pt.y);
+      }
+      drawnPoints.value.push({ x: pt.x, y: pt.y });
+    }
+  }
+
   ctx.strokeStyle = 'blue';
   ctx.lineWidth = 2;
   ctx.stroke();
