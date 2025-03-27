@@ -13,31 +13,34 @@
             </div>
           </div>
           <div class="grid grid-cols-1 items-center justify-items-center p-6">
-            <div class="w-full p-4 bg-base-100 rounded-xl">
-              <div v-if="!chartDataAvailable" class="relative">
-                <div class="absolute -left-2 bottom-0 h-24 w-0.5 bg-base-content flex items-start justify-end">
-                  <span class="relative -top-6 left-1">Y</span>
-                </div>
-                <div class="absolute -left-2 bottom-0 h-0.5 w-1/2 bg-base-content flex items-end justify-end">X</div>
-                <div class="mt-6 w-full h-[63vh]">
-                  <canvas     
-                    ref="canvasRef" 
-                    class="w-full h-[60vh] rounded-xl"
-                    style="border:1px solid black; touch-action: none;"
-                    @mousedown="startDrawing" 
-                    @mouseup="stopDrawing" 
-                    @mouseleave="stopDrawing"
-                    @mousemove="draw"
-                    @touchstart="startDrawing"
-                    @touchend="stopDrawing"
-                    @touchmove="draw"
-                  ></canvas>
+            <div class="w-full p-4 bg-base-100 rounded-xl grid md:grid-cols-2 grid-cols-1 gap-3">
+              <div class="relative">
+                <div class="relative">
+                  <div class="absolute left-0 bottom-5 h-96 w-0.5 bg-base-content flex items-start justify-end">
+                    <span class="relative -top-6 left-1">Y</span>
+                  </div>
+                  <div class="absolute left-0 bottom-5 h-0.5 w-full bg-base-content flex items-end justify-end">X</div>
+                  <div class="mt-6 w-full h-[63vh]">
+                    <canvas     
+                      ref="canvasRef" 
+                      class="w-full h-[60vh] rounded-xl border-r-2 border-t-2 border-base-300"
+                      @mousedown="startDrawing" 
+                      @mouseup="stopDrawing" 
+                      @mouseleave="stopDrawing"
+                      @mousemove="draw"
+                      @touchstart="startDrawing"
+                      @touchend="stopDrawing"
+                      @touchmove="draw"
+                    ></canvas>
+                  </div>
                 </div>
               </div>
-              <div v-if="chartDataAvailable" class="mt-6 w-full h-[80vh]">
-                <canvas ref="chartCanvasRef" class="w-full" style="height:300px;"></canvas>
+              <div>
+                <div v-if="chartDataAvailable" class="mt-6 w-full h-[80vh]">
+                  <canvas ref="chartCanvasRef" class="w-full" style="height:300px;"></canvas>
+                </div>
               </div>
-              <div class="flex items-center gap-3 justify-between w-full mt-6">
+              <div class="flex items-center gap-3 justify-between w-full mt-6 col-span-2">
                 <div class="flex items-center gap-3">
                     <div class="dropdown dropdown-top">
                         <div tabindex="0" role="button" class="btn m-1">
@@ -119,6 +122,8 @@ const settings = ref({
   vmax: 5,
   vmin: 0
 })
+let lastX = 0;
+let lastY = 0;
 
 const adjustCanvasSize = () => {
     if (canvasRef.value) {
@@ -131,6 +136,8 @@ const adjustCanvasSize = () => {
                 context.value.lineWidth = lineWidthSelected.value;
                 context.value.lineCap = lineCapSelected.value;
                 context.value.strokeStyle = strokeStyleSelected.value;
+                context.value.clearRect(0, 0, canvasRef.value.width, canvasRef.value.height);
+                drawCanvasGrid();
             }
         }
     }
@@ -148,7 +155,6 @@ const saveHardware = () => {
   })
 }
 
-
 onMounted(async () => {
   await nextTick();
   adjustCanvasSize();
@@ -165,7 +171,21 @@ onBeforeUnmount(() => {
   
 const startDrawing = (event: MouseEvent | TouchEvent) => {
   isDrawing.value = true;
-  draw(event);
+  // draw(event);
+  if (!context.value || !canvasRef.value) return;
+
+  const rect = canvasRef.value.getBoundingClientRect();
+  if (event instanceof MouseEvent) {
+    lastX = event.clientX - rect.left;
+    lastY = event.clientY - rect.top;
+  } else if (event instanceof TouchEvent) {
+    lastX = event.touches[0].clientX - rect.left;
+    lastY = event.touches[0].clientY - rect.top;
+  }
+
+  context.value.beginPath();
+  context.value.moveTo(lastX, lastY);
+  drawnPoints.value.push({ x: lastX, y: lastY });
 };
   
 const stopDrawing = () => {
@@ -175,7 +195,6 @@ const stopDrawing = () => {
   
 const draw = (event: MouseEvent | TouchEvent) => {
   if (!isDrawing.value || !context.value || !canvasRef.value) return;
-
   let x: number = 0, y: number = 0;
   const rect = canvasRef.value.getBoundingClientRect();
 
@@ -196,6 +215,9 @@ const draw = (event: MouseEvent | TouchEvent) => {
   context.value.beginPath();
   context.value.moveTo(x, y);
   console.log('Drawing at:', x, y);
+
+  lastX = x;
+  lastY = y;
 };
 
 
@@ -239,6 +261,38 @@ const reduceDrawnPoints = () => {
     const step = Math.floor(drawnPoints.value.length / maxPoints);
     drawnPoints.value = drawnPoints.value.filter((_, index) => index % step === 0);
   }
+};
+
+
+const drawCanvasGrid = () => {
+  if (!context.value || !canvasRef.value) return;
+
+  const ctx = context.value;
+  const width = canvasRef.value.width;
+  const height = canvasRef.value.height;
+
+  const spacingX = 50;
+  const spacingY = 50;
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+  ctx.lineWidth = 1;
+
+  for (let x = spacingX; x < width; x += spacingX) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.stroke();
+  }
+
+  for (let y = spacingY; y < height; y += spacingY) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
+  }
+
+  ctx.restore();
 };
 
 const convertToChart = async () => {
