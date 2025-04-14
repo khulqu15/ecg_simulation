@@ -330,25 +330,33 @@ const drawCanvasGrid = () => {
   const width = canvasRef.value.width;
   const height = canvasRef.value.height;
 
-  const spacingX = 50;
-  const spacingY = 50;
+  const spacingX = width / 10;
+  const spacingY = height / 6;
 
   ctx.save();
   ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
   ctx.lineWidth = 1;
+  ctx.font = '10px Arial';
 
-  for (let x = spacingX; x < width; x += spacingX) {
+  for (let i = 0; i <= 10; i++) {
+    const x = spacingX * i;
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x, height);
     ctx.stroke();
+
+    ctx.fillText((i * 0.1).toFixed(1) + 's', x + 2, height - 4);
   }
 
-  for (let y = spacingY; y < height; y += spacingY) {
+  for (let j = 0; j <= 6; j++) {
+    const y = spacingY * j;
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(width, y);
     ctx.stroke();
+
+    const volt = (1.5 - j * 0.5).toFixed(1);
+    ctx.fillText(`${volt} mV`, 4, y - 2);
   }
 
   ctx.restore();
@@ -361,7 +369,10 @@ const convertToChart = async () => {
 
   const canvasHeight = canvasRef.value.height;
   const labels = drawnPoints.value.map((point, index) => index.toString());
-  const data = drawnPoints.value.map(point => canvasHeight - point.y);
+  const data = drawnPoints.value.map(point => {
+    const normalizedY = (canvasHeight - point.y) / canvasHeight;
+    return (normalizedY - 0.5) * 3;
+  });
 
   chartDataAvailable.value = true;
   await nextTick();
@@ -390,15 +401,23 @@ const convertToChart = async () => {
             display: true,
             title: {
               display: true,
-              text: 'Index'
+              text: 'Time (seconds)'
+            },
+            ticks: {
+              callback: function(value, index) {
+                const total = drawnPoints.value.length;
+                return (index / total).toFixed(2);
+              }
             }
           },
           y: {
             display: true,
             title: {
               display: true,
-              text: 'Y Value'
-            }
+              text: 'Voltage (mV)'
+            },
+            min: -1.5,
+            max: 1.5
           }
         }
       }
